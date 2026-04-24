@@ -1,5 +1,5 @@
 # =========================================================
-# SSH KEYS (IMPORTANT - NEVER PUSH)
+# SSH KEYS (NEVER PUSH)
 # =========================================================
 *.pem
 *.key
@@ -11,33 +11,35 @@
 *.tfstate
 *.tfstate.backup
 *.tfplan
+crash.log
 terraform.tfstate.d/
 
-# Crash logs
-crash.log
+# ⚠️ Lock file (TP / projet perso → ignoré ici)
+.terraform.lock.hcl
 
 # =========================================================
 # ANSIBLE
 # =========================================================
 *.retry
 
-# Inventory sensitive (si jamais tu ajoutes des creds)
+# Inventories locaux (optionnel mais recommandé)
+hosts.ini
 inventory.ini
 inventory.yaml
 
 # =========================================================
-# OS FILES
+# SYSTEM FILES
 # =========================================================
 .DS_Store
 Thumbs.db
 
 # =========================================================
-# EDITORS
+# EDITORS / IDE
 # =========================================================
 .vscode/
 .idea/
 
 # =========================================================
-# LOGS
+# LOG FILES
 # =========================================================
 *.log
