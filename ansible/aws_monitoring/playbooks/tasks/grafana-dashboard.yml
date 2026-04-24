@@ -1,0 +1,139 @@
+---
+# ==========================================
+# GRAFANA DASHBOARD - FILTER + CLEAN LAYOUT
+# CPU / RAM / DISK / NETWORK / UPTIME
+# ==========================================
+
+- name: Configure Grafana dashboard with filter
+  hosts: monitoring
+  become: yes
+
+  tasks:
+
+    # -----------------------------
+    # DOSSIERS
+    # -----------------------------
+    - name: Create Grafana directories
+      file:
+        path: "{{ item }}"
+        state: directory
+      loop:
+        - /etc/grafana/provisioning/dashboards
+        - /var/lib/grafana/dashboards
+
+    # -----------------------------
+    # PROVIDER DASHBOARD
+    # -----------------------------
+    - name: Dashboard provider
+      copy:
+        dest: /etc/grafana/provisioning/dashboards/dashboard.yml
+        content: |
+          apiVersion: 1
+
+          providers:
+            - name: "default"
+              orgId: 1
+              folder: ""
+              type: file
+              disableDeletion: false
+              editable: true
+              options:
+                path: /var/lib/grafana/dashboards
+
+    # -----------------------------
+    # DASHBOARD + FILTER INSTANCE
+    # -----------------------------
+    - name: Create filtered dashboard
+      copy:
+        dest: /var/lib/grafana/dashboards/system.json
+        content: |
+          {
+            "title": "System Monitoring (Filtered)",
+            "schemaVersion": 27,
+            "version": 1,
+
+            "templating": {
+              "list": [
+                {
+                  "name": "instance",
+                  "type": "query",
+                  "datasource": "Prometheus",
+                  "query": "label_values(node_exporter_build_info, instance)",
+                  "refresh": 1,
+                  "includeAll": true,
+                  "allValue": ".*"
+                }
+              ]
+            },
+
+            "panels": [
+
+              {
+                "type": "graph",
+                "title": "CPU Usage (%)",
+                "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+                "targets": [
+                  {
+                    "expr": "100 - (avg by (instance) (rate(node_cpu_seconds_total{mode=\"idle\", instance=~\"$instance\"}[5m])) * 100)"
+                  }
+                ]
+              },
+
+              {
+                "type": "graph",
+                "title": "RAM Usage (%)",
+                "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+                "targets": [
+                  {
+                    "expr": "(1 - (node_memory_MemAvailable_bytes{instance=~\"$instance\"} / node_memory_MemTotal_bytes{instance=~\"$instance\"})) * 100"
+                  }
+                ]
+              },
+
+              {
+                "type": "graph",
+                "title": "Disk Usage (%)",
+                "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+                "targets": [
+                  {
+                    "expr": "(1 - (node_filesystem_avail_bytes{instance=~\"$instance\"} / node_filesystem_size_bytes{instance=~\"$instance\"})) * 100"
+                  }
+                ]
+              },
+
+              {
+                "type": "graph",
+                "title": "Network IN/OUT (bytes/sec)",
+                "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+                "targets": [
+                  {
+                    "expr": "rate(node_network_receive_bytes_total{instance=~\"$instance\"}[5m])"
+                  },
+                  {
+                    "expr": "rate(node_network_transmit_bytes_total{instance=~\"$instance\"}[5m])"
+                  }
+                ]
+              },
+
+              {
+                "type": "stat",
+                "title": "Uptime (seconds)",
+                "gridPos": { "h": 5, "w": 24, "x": 0, "y": 16 },
+                "targets": [
+                  {
+                    "expr": "time() - node_boot_time_seconds{instance=~\"$instance\"}"
+                  }
+                ]
+              }
+
+            ]
+          }
+
+    # -----------------------------
+    # RESTART GRAFANA
+    # -----------------------------
+    - name: Restart Grafana
+      systemd:
+        name: grafana-server
+        state: restarted
+        enabled: yes

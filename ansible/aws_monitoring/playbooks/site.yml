@@ -1,0 +1,13 @@
+---
+# ==========================================
+# MASTER PLAYBOOK - MONITORING STACK
+# ==========================================
+
+- name: Node Exporter install
+  import_playbook: tasks/node-exporter.yml
+
+- name: Monitoring stack (Prometheus + Grafana)
+  import_playbook: tasks/monitoring-stack.yml
+
+- name: Grafana dashboards
+  import_playbook: tasks/grafana-dashboard.yml

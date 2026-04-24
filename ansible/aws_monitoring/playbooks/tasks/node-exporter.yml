@@ -1,0 +1,85 @@
+---
+# ==========================================
+# NODE EXPORTER - INSTALL + CONFIG
+# SUR LES 3 MACHINES (web + db + monitoring)
+# ==========================================
+
+- name: Install and configure Node Exporter
+  hosts: all
+  become: yes
+
+  vars:
+    node_exporter_version: "1.8.2"
+
+  tasks:
+
+    # -----------------------------
+    # MISE À JOUR SYSTÈME
+    # -----------------------------
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+
+    # -----------------------------
+    # TÉLÉCHARGEMENT NODE EXPORTER
+    # -----------------------------
+    - name: Download Node Exporter
+      get_url:
+        url: https://github.com/prometheus/node_exporter/releases/download/v{{ node_exporter_version }}/node_exporter-{{ node_exporter_version }}.linux-amd64.tar.gz
+        dest: /tmp/node_exporter.tar.gz
+
+    # -----------------------------
+    # EXTRACTION
+    # -----------------------------
+    - name: Extract archive
+      unarchive:
+        src: /tmp/node_exporter.tar.gz
+        dest: /opt/
+        remote_src: yes
+
+    # -----------------------------
+    # INSTALLATION BINAIRE
+    # -----------------------------
+    - name: Install binary
+      copy:
+        src: /opt/node_exporter-{{ node_exporter_version }}.linux-amd64/node_exporter
+        dest: /usr/local/bin/node_exporter
+        mode: '0755'
+        remote_src: yes
+
+    # -----------------------------
+    # UTILISATEUR SYSTÈME (SECURITÉ)
+    # -----------------------------
+    - name: Create system user
+      user:
+        name: node_exporter
+        system: yes
+        shell: /usr/sbin/nologin
+
+    # -----------------------------
+    # SERVICE SYSTEMD
+    # -----------------------------
+    - name: Create systemd service
+      copy:
+        dest: /etc/systemd/system/node_exporter.service
+        content: |
+          [Unit]
+          Description=Node Exporter
+          After=network.target
+
+          [Service]
+          User=node_exporter
+          ExecStart=/usr/local/bin/node_exporter
+
+          [Install]
+          WantedBy=multi-user.target
+
+    # -----------------------------
+    # ACTIVATION SERVICE
+    # -----------------------------
+    - name: Start Node Exporter
+      systemd:
+        name: node_exporter
+        enabled: yes
+        state: started
+        daemon_reload: yes
